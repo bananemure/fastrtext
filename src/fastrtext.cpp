@@ -71,8 +71,8 @@ public:
       for (int j = 0; j < predictions.size() ; ++j){
         logProbabilities[j] = predictions[j].first;
         // remove label prefix
-        std::string label_without_prefix = predictions[j].second.erase(0, label_prefix_size);
-        labels[j] = label_without_prefix;
+        //std::string label_without_prefix = predictions[j].second.erase(0, label_prefix_size);
+        labels[j] = predictions[j].second;
       }
       NumericVector probabilities(exp(logProbabilities));
       probabilities.attr("names") = labels;
