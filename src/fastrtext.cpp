@@ -58,28 +58,48 @@ public:
     std::Rcout << "" << std::endl;
   }
 
-  List predict(CharacterVector documents, int k = 1) {
+  DataFrame predict(CharacterVector documents, int k = 1) {
     check_model_loaded();
-    List list(documents.size());
-    int label_prefix_size = model->getArgs().label.size();
+    
+    int N = documents.size();
+    NumericMatrix m_prob(N,k);
+    CharacterMatrix m_label(N,k);
     std::string s;
-    for(int i = 0; i < documents.size(); ++i){
+    //int label_prefix_size = model->getArgs().label.size();
+       
+    for(int i = 0; i < N; ++i){ //i <> df row
       s = documents[i];
       std::vector<std::pair<real, std::string> > predictions = predict_proba(s, k);
-      NumericVector logProbabilities(predictions.size());
-      CharacterVector labels(predictions.size());
-      for (int j = 0; j < predictions.size() ; ++j){
-        logProbabilities[j] = predictions[j].first;
+      
+      //extract prediction for a document
+      for (int j = 0; j < k ; ++j){
+        
+        if(!predictions.empty()){
+          m_prob(i,j) = exp(predictions[j].first);
+          m_label(i,j) = predictions[j].second;
+        }else{
+          m_prob(i,j) = 0.0 ;
+          m_label(i,j) = "";
+        }
         // remove label prefix
         //std::string label_without_prefix = predictions[j].second.erase(0, label_prefix_size);
-        labels[j] = predictions[j].second;
       }
-      NumericVector probabilities(exp(logProbabilities));
-      probabilities.attr("names") = labels;
-      list[i] = probabilities;
+      
       Rcpp::checkUserInterrupt();
     }
-    return list;
+    
+    //fill the data.frame
+    List df(2*k);
+    std::vector<std::string>colname;
+    for(int j = 0; j < k; ++j ){
+      df[2*j] = m_label(_,j);
+      df[2*j+1] = m_prob(_,j); 
+      colname.push_back("label"+std::to_string(j+1));
+      colname.push_back("prob"+std::to_string(j+1));
+    }
+    
+    df.attr("names")= colname;
+    return  DataFrame (df);
   }
 
   List get_parameters(){
